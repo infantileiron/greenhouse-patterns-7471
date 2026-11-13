@@ -18,13 +18,17 @@ def create_report(review):
     file_id=str(uuid4()); path=ARTIFACT_DIR/f'{file_id}.csv'
     with path.open('w',encoding='utf-8-sig',newline='') as stream:
         writer=csv.writer(stream)
-        writer.writerow(['rule_id','antecedent','consequent','support_count','sample_count','support','confidence','lift','p_value','q_value','checksum','note'])
+        writer.writerow(['rule_id','antecedent','consequent','support_count','sample_count','effective_n','excluded_n','exclusion_reason','support','confidence','lift','p_value','q_value','checksum','note'])
         for rule in rows:
             # Neutralize spreadsheet formula injection in user-provided symptom labels and notes.
             def safe(value):
                 text=str(value)
                 return "'"+text if text.lstrip().startswith(('=','+','-','@')) else text
-            writer.writerow([safe(rule['rule_id']),safe(' + '.join(rule['antecedent'])),safe(rule['consequent']),rule['count'],run['result']['sample_count'],rule['support'],rule['confidence'],rule['lift'],rule['p_value'],rule['q_value'],run['result']['checksum'],safe(review['note'])])
+            # 旧结果没有逐规则有效样本字段：旧数据按完整观测，有效样本即全部分母。
+            effective=rule.get('effective_n',run['result']['sample_count'])
+            excluded=rule.get('excluded_n',run['result']['sample_count']-effective)
+            reason=f"{'、'.join(rule.get('excluded_by') or [])}未查，未计入分母" if excluded else ''
+            writer.writerow([safe(rule['rule_id']),safe(' + '.join(rule['antecedent'])),safe(rule['consequent']),rule['count'],run['result']['sample_count'],effective,excluded,safe(reason),rule['support'],rule['confidence'],rule['lift'],rule['p_value'],rule['q_value'],run['result']['checksum'],safe(review['note'])])
     return save('reports',Report(review['id'],'南岭温室复查清单',str(path.resolve())).to_record())
 def download_report(report_id):
     record=get('reports',report_id)

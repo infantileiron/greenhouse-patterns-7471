@@ -4,7 +4,13 @@ from src.utils.csv_data import parse_samples, checksum
 from fastapi import HTTPException
 
 def summary(record):
-    return {k:v for k,v in record.items() if k!='rows'} | {'sample_count':len(record['rows']), 'item_count':len(set(x for row in record['rows'] for x in row['symptoms']))}
+    rows=record['rows']
+    universe=set()
+    for row in rows:
+        universe.update(row['symptoms']); universe.update(row.get('unexamined') or ())
+    return {k:v for k,v in record.items() if k!='rows'} | {'sample_count':len(rows),'item_count':len(universe),
+        'unexamined_cells':sum(len(row.get('unexamined') or ()) for row in rows),
+        'partial_plants':sum(1 for row in rows if row.get('unexamined'))}
 def list_datasets(): return [summary(r) for r in all_records('datasets')]
 def require_dataset(record_id):
     record=get('datasets',record_id)

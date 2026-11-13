@@ -12,10 +12,15 @@ def make_rows():
     rng=random.Random(261105); rows=[]
     for i in range(800):
         items=set(); fungal=rng.random()<.31; root=rng.random()<.23
-        probs=[.9 if fungal else .07,.76 if fungal else .1,.18,.84 if root else .06,.9 if root else .04,.72 if root else .035,.2,.15,.75 if root else .1,.14]
+        probs=[.9 if fungal else .07,.76 if fungal else .1,.18,.84 if root else .06,.9 if root else .04,.72 if root else .035,.85 if fungal else .06,.15,.75 if root else .1,.14]
         for item,p in zip(ITEMS,probs):
             if rng.random()<p: items.add(item)
-        rows.append({'plant_id':f'NL-{i+1:04}','greenhouse':f'温室{1+i%8:02}','symptoms':sorted(items)})
+        rows.append({'plant_id':f'NL-{i+1:04}','greenhouse':f'温室{1+i%8:02}','symptoms':sorted(items),'unexamined':[]})
+    # 缺查集中在单个温室：温室03 本轮未检查白粉，相应植株该病征记为未查而非阴性。
+    for row in rows:
+        if row['greenhouse']=='温室03':
+            row['symptoms']=[x for x in row['symptoms'] if x!='白粉']
+            row['unexamined']=['白粉']
     return rows
 
 def seed():
